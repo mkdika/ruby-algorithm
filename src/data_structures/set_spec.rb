@@ -5,7 +5,6 @@ scenarios:
 3. only accept unique/non exists data
 =end
 
-require "rspec"
 require_relative 'set'
 
 RSpec.describe Set do
