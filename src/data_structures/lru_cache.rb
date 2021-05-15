@@ -10,67 +10,74 @@ This implementation will have:
 =end
 
 class LruCache
-  attr_reader :cache_size, :cache_map, :cache_nodes
+  attr_reader :cache_size, :cache_map
 
-  def initialize(cache_size: 5)
+  def initialize(cache_size: 3)
     @cache_size = cache_size
     @cache_map = {}
-    @cache_nodes = nil
+    @front_node = nil
+    @rear_node = nil
   end
 
-  def put(key, value)
+  def put(value)
+    new_node = Node.new(value)
+    new_node.child = @front_node
 
-    @cache_map[key] = value
+    unless @front_node.nil?
+      @front_node.parent = new_node
+    end
+    @front_node = new_node
 
-    if @cache_nodes.nil?
-      @cache_nodes = LruNode.new(key, nil, nil) 
-      @first_node = @cache_nodes
-    else
-      if @cache_map.size <= @cache_size
-        new_node = LruNode.new(key, nil, @cache_nodes)
-        @cache_nodes.parent = new_node
-        @cache_nodes = new_node
+    if @rear_node.nil?
+      @rear_node = new_node
+    end
+    @cache_map[value] = new_node
+    
+    if @cache_map.size > @cache_size
+      @cache_map.delete(@rear_node.value)
+      @rear_node = @rear_node.parent
+      @rear_node.child = nil
+    end
+  end
 
-        if @first_node.parent.nil?
-          @first_node.parent = new_node
+  def get(value)
+    return nil unless @cache_map.key?(value)
+
+    if @cache_map.size > 1
+      node = @cache_map[value]
+
+      if node.value != @front_node.value
+        if node.value == @rear_node.value
+          @rear_node = @rear_node.parent
+          @rear_node.child = nil
         end
-      else
-        @cache_map.delete @first_node.key
-        new_first_node = @first_node.parent
-        new_first_node.child = nil
-        @first_node = new_first_node
-        new_node = LruNode.new(key, nil, @cache_nodes)
-        @cache_nodes.parent = new_node
-        @cache_nodes = new_node
+        
+        node.parent.child = node.child unless node.parent.nil?
+        node.child.parent = node.parent unless node.child.nil?
+        
+        node.parent = nil
+        node.child = @front_node
+        @front_node.parent = node
+        @front_node = node
       end
     end
 
-  end
-
-  def get(key)
-    if @cache_map.key? key
-      
-
-
-      @cache_map[key]
-    else
-      nil
-    end
+    return value
   end
 
   # the most left array is the latest/ least recent
   def cache_nodes_to_array
     arr = []
-    node = @first_node
+    node = @rear_node
     begin
-      arr << node.key
+      arr << node.value
       node = node.parent
     end while !node.nil?
     return arr
   end
 
   def cache_map_key_to_array
-    @cache_map.keys.map {|k| k}
+    @cache_map.keys.to_a
   end
 
   def cache_size
@@ -78,20 +85,21 @@ class LruCache
   end
 end
 
-class LruNode
-  attr_reader :key, :parent, :child
+# This is double linked list
+class Node
+  attr_reader :value, :parent, :child
   attr_writer :parent, :child
-  def initialize(key, parent, child)
-    @key = key
-    @parent = parent
-    @child = child
+  def initialize(value)
+    @value = value
+    @parent = nil
+    @child = nil
   end
 
-  def parent=(value)
-    @parent = value
+  def parent=(node)
+    @parent = node
   end
 
-  def child=(value)
-    @child = value
+  def child=(node)
+    @child = node
   end
 end
