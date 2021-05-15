@@ -1,58 +1,96 @@
 require_relative 'lru_cache'
 
 RSpec.describe LruCache do
-  
-
-  context '#put' do
-    it 'can insert data into cache' do
-      lru_cache = LruCache.new(cache_size: 5)
-      lru_cache.put(1, 'A')
-    
-      expect(lru_cache.cache_map.empty?).to eq false
+  describe '#put' do
+    context 'cache size is NOT full' do
+      it 'can insert data into cache map & cache nodes' do
+        cache = LruCache.new(cache_size: 3)
+        cache.put(1)
+        cache.put(2)
+        cache.put(3)
+      
+        expect(cache.cache_size).to eq 3
+        expect(cache.cache_map[1].nil?).to eq false
+        expect(cache.cache_map[2].nil?).to eq false
+        expect(cache.cache_map[3].nil?).to eq false
+        expect(cache.cache_map_key_to_array).to match_array [1, 2, 3]
+        expect(cache.cache_nodes_to_array).to eq [1, 2, 3]
+      end
     end
 
-    it 'can return existing data from cache' do
-      lru_cache = LruCache.new(cache_size: 5)
-      lru_cache.put(1, 'X')
-
-      expect(lru_cache.get(1)).to eq 'X'
-    end
-
-    it 'store & evict cache key into cache frame' do
-      lru_cache = LruCache.new(cache_size: 2)
-      lru_cache.put(1, 'A') 
-      lru_cache.put(2, 'B') 
-      lru_cache.put(3, 'C') 
-
-      expect(lru_cache.cache_map_key_to_array).to eq [2, 3]
-      expect(lru_cache.cache_size).to eq 2
-      expect(lru_cache.cache_nodes_to_array).to eq [2, 3]
+    context 'cache size is full' do
+      it 'remove the least and insert new data into cache map & cache nodes' do
+        cache = LruCache.new(cache_size: 3)
+        cache.put(1)
+        cache.put(2)
+        cache.put(3)
+        cache.put(4)
+      
+        expect(cache.cache_size).to eq 3
+        expect(cache.cache_map[1].nil?).to eq true
+        expect(cache.cache_map[2].nil?).to eq false
+        expect(cache.cache_map[3].nil?).to eq false
+        expect(cache.cache_map[4].nil?).to eq false
+        expect(cache.cache_map_key_to_array).to match_array [2, 3, 4]
+        expect(cache.cache_nodes_to_array).to eq [2, 3, 4]
+      end
     end
   end
 
-  context '#get' do
-    it 'can evict least cache key with most recent one' do
-      lru_cache = LruCache.new(cache_size: 2)
-      lru_cache.put(1, 'A') 
-      lru_cache.put(2, 'B') 
-      result = lru_cache.get(1)
+  describe '#get' do
+    context 'value found in cache' do
+      it 'return value and adjust cache element' do
+        cache = LruCache.new(cache_size: 4)
+        cache.put(1)
+        cache.put(2)
+        cache.put(3)
+        cache.put(4)
+        cache.put(5)
+        expect(cache.cache_nodes_to_array).to eq [2, 3, 4, 5]
 
-      expect(result).to eq 1
-      expect(lru_cache.cache_map_key_to_array).to eq [1, 2]
-      expect(lru_cache.cache_size).to eq 2
-      expect(lru_cache.cache_nodes_to_array).to eq [2, 1]
+        result = cache.get(2)
+        expect(result).to eq 2
+        expect(cache.cache_size).to eq 4
+        expect(cache.cache_map_key_to_array).to match_array [3, 4, 5, 2]
+        expect(cache.cache_nodes_to_array).to eq [3, 4, 5, 2]
+
+        result = cache.get(2)
+        expect(result).to eq 2
+        expect(cache.cache_size).to eq 4
+        expect(cache.cache_map_key_to_array).to match_array [3, 4, 5, 2]
+        expect(cache.cache_nodes_to_array).to eq [3, 4, 5, 2]
+
+        result = cache.get(4)
+        expect(result).to eq 4
+        expect(cache.cache_size).to eq 4
+        expect(cache.cache_map_key_to_array).to match_array [3, 4, 5, 2]
+        expect(cache.cache_nodes_to_array).to eq [3, 5, 2, 4]
+      end
+      it 'when single element return value' do
+        cache = LruCache.new(cache_size: 3)
+        cache.put(1)
+
+        result = cache.get(1)
+        expect(result).to eq 1
+        expect(cache.cache_size).to eq 1
+        expect(cache.cache_map_key_to_array).to match_array [1]
+        expect(cache.cache_nodes_to_array).to eq [1]
+      end
     end
 
-    it 'return nil when key not found' do
-      lru_cache = LruCache.new(cache_size: 2)
-      lru_cache.put(1, 'A') 
-      lru_cache.put(2, 'B') 
-      result = lru_cache.get(4)
+    context 'value NOT found in cache' do
+      it 'return nil and NOT adjust cache element' do
+        cache = LruCache.new(cache_size: 3)
+        cache.put(1)
+        cache.put(2)
+        cache.put(3)
 
-      expect(result).to eq nil
-      expect(lru_cache.cache_map_key_to_array).to eq [1, 2]
-      expect(lru_cache.cache_size).to eq 2
-      expect(lru_cache.cache_nodes_to_array).to eq [1, 2]
+        result = cache.get(4)
+        expect(result).to eq nil
+        expect(cache.cache_size).to eq 3
+        expect(cache.cache_map_key_to_array).to match_array [1, 2, 3]
+        expect(cache.cache_nodes_to_array).to eq [1, 2, 3]
+      end
     end
   end
 end
