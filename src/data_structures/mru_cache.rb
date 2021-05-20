@@ -49,22 +49,3 @@ class MruCache
     @cache_map.size
   end
 end
-
-# This is double linked list
-class Node
-  attr_reader :value, :parent, :child
-  attr_writer :parent, :child
-  def initialize(value)
-    @value = value
-    @parent = nil
-    @child = nil
-  end
-
-  def parent=(node)
-    @parent = node
-  end
-
-  def child=(node)
-    @child = node
-  end
-end
